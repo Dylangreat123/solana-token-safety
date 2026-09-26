@@ -202,7 +202,8 @@ export function buildOpenApi({ publicUrl, priceUsd, networkId }) {
               required: true,
               description: "Base58 address of the token mint to check.",
               schema: { type: "string", minLength: 32, maxLength: 44 },
-              example: EXAMPLE_MINT,
+              // Same token as the response example below, so the two agree.
+              example: EXAMPLE_REPORT.mint,
             },
           ],
           responses: {
@@ -226,11 +227,11 @@ export function buildOpenApi({ publicUrl, priceUsd, networkId }) {
         get: {
           operationId: "getSampleReport",
           summary: "Fetch a sample safety report for the BONK token mint",
-          description: "Returns a cached report for BONK so you can preview the output format. No payment needed.",
+          description: `Returns a live report for the BONK token mint (${EXAMPLE_MINT}), cached for 15 minutes and wrapped with a short note, so you can preview the output format. No payment needed.`,
           responses: {
             200: {
-              description: "A sample report.",
-              content: { "application/json": { schema: SAMPLE_SCHEMA, example: { note: SAMPLE_NOTE, report: EXAMPLE_REPORT } } },
+              description: "A current report for BONK.",
+              content: { "application/json": { schema: SAMPLE_SCHEMA } },
             },
             503: { description: "Sample temporarily unavailable.", content: { "application/json": { schema: errorBody } } },
           },

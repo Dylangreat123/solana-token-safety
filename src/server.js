@@ -142,7 +142,7 @@ export function createApp(config, { rpc = makeRpc(config.rpcUrl), facilitator, s
       serviceName: SERVICE_NAME,
       tags: ["solana", "token", "security", "rug-check", "risk"],
       extensions: declareDiscoveryExtension({
-        input: { mint: EXAMPLE_MINT },
+        input: { mint: EXAMPLE_REPORT.mint },
         inputSchema: {
           properties: { mint: { type: "string", description: "Base58 token mint address" } },
           required: ["mint"],

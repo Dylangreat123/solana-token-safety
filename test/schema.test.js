@@ -72,11 +72,29 @@ test("the sample route's wrapper matches its schema", () => {
 
 test("OpenAPI examples match their own schemas", () => {
   const doc = buildOpenApi({ publicUrl: "https://example.test", priceUsd: 0.02, networkId: "solana:x" });
+  let checked = 0;
   for (const [path, item] of Object.entries(doc.paths)) {
     const media = item.get.responses[200].content["application/json"];
-    const validate = ajv.compile(media.schema);
-    assertValid(validate, media.example, `${path} example`);
+    if (media.example === undefined) continue;
+    assertValid(ajv.compile(media.schema), media.example, `${path} example`);
+    checked++;
   }
+  assert.ok(checked >= 1, "the paid report route should carry an example");
+});
+
+test("the paid route's request and response examples use the same token", () => {
+  const doc = buildOpenApi({ publicUrl: "https://example.test", priceUsd: 0.02, networkId: "solana:x" });
+  const op = doc.paths["/v1/token-report"].get;
+  const mintParam = op.parameters.find((p) => p.name === "mint");
+  assert.equal(mintParam.example, op.responses[200].content["application/json"].example.mint);
+});
+
+test("the sample route documents BONK and carries no conflicting example", () => {
+  const doc = buildOpenApi({ publicUrl: "https://example.test", priceUsd: 0.02, networkId: "solana:x" });
+  const op = doc.paths["/v1/sample-report"].get;
+  assert.match(op.summary, /BONK/);
+  assert.match(op.description, /DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263/);
+  assert.equal(op.responses[200].content["application/json"].example, undefined);
 });
 
 test("fields agents gate on are required", () => {
