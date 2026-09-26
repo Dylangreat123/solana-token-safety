@@ -4,12 +4,44 @@
 import { EXAMPLE_REPORT } from "./example.js";
 
 export const EXAMPLE_MINT = "DezXAZ8z7PnrnRJjz3wXBoRgixCa6xjnB7YaB1pPB263";
+export const SAMPLE_NOTE = "Free sample. Paid reports work for any token mint.";
 
 const nullableString = { type: ["string", "null"] };
 
+const FLAG_NAMES = [
+  "canMintMore",
+  "canFreeze",
+  "permanentDelegate",
+  "nonTransferable",
+  "pausable",
+  "transferHook",
+  "transferFeeBps",
+  "defaultFrozen",
+  "metadataMutable",
+];
+
+// Every report always contains all of these keys. `holders`, `launch` and
+// `age` are null when they don't apply or couldn't be fetched.
 export const REPORT_SCHEMA = {
   type: "object",
-  required: ["mint", "risk", "verdict", "findings", "flags"],
+  required: [
+    "reportVersion",
+    "mint",
+    "network",
+    "checkedAt",
+    "token",
+    "risk",
+    "verdict",
+    "findings",
+    "flags",
+    "authorities",
+    "extensions",
+    "holders",
+    "launch",
+    "age",
+    "limitations",
+    "disclaimer",
+  ],
   properties: {
     reportVersion: { type: "string" },
     mint: { type: "string", description: "The token mint address that was checked." },
@@ -17,6 +49,7 @@ export const REPORT_SCHEMA = {
     checkedAt: { type: "string", format: "date-time" },
     token: {
       type: "object",
+      required: ["name", "symbol", "decimals", "supply", "program", "knownAsset"],
       properties: {
         name: nullableString,
         symbol: nullableString,
@@ -26,12 +59,14 @@ export const REPORT_SCHEMA = {
         knownAsset: {
           type: ["object", "null"],
           description: "Set for well-known assets (e.g. USDC) whose issuer powers are expected.",
+          required: ["name", "issuer", "kind"],
           properties: { name: { type: "string" }, issuer: { type: "string" }, kind: { type: "string" } },
         },
       },
     },
     risk: {
       type: "object",
+      required: ["level", "safetyScore"],
       properties: {
         level: { type: "string", enum: ["low", "medium", "high", "critical"] },
         safetyScore: { type: "integer", minimum: 0, maximum: 100, description: "Higher is safer. low 80-100, medium 50-79, high 20-49, critical 0-19." },
@@ -42,6 +77,7 @@ export const REPORT_SCHEMA = {
       type: "array",
       items: {
         type: "object",
+        required: ["id", "severity", "title", "detail"],
         properties: {
           id: { type: "string" },
           severity: { type: "string", enum: ["critical", "high", "medium", "low", "info"] },
@@ -52,7 +88,8 @@ export const REPORT_SCHEMA = {
     },
     flags: {
       type: "object",
-      description: "Machine-readable yes/no answers for the main risk checks.",
+      description: "Machine-readable yes/no answers for the main risk checks. Every flag is always present.",
+      required: FLAG_NAMES,
       properties: {
         canMintMore: { type: "boolean" },
         canFreeze: { type: "boolean" },
@@ -62,17 +99,19 @@ export const REPORT_SCHEMA = {
         transferHook: { type: "boolean" },
         transferFeeBps: { type: "integer" },
         defaultFrozen: { type: "boolean" },
-        metadataMutable: { type: ["boolean", "null"] },
+        metadataMutable: { type: ["boolean", "null"], description: "Null when the token has no metadata." },
       },
     },
     authorities: {
       type: "object",
+      required: ["mint", "freeze", "metadataUpdate"],
       properties: { mint: nullableString, freeze: nullableString, metadataUpdate: nullableString },
     },
     extensions: { type: "array", items: { type: "string" }, description: "Token-2022 extensions on the mint." },
     holders: {
       type: ["object", "null"],
-      description: "Concentration among the largest token accounts, grouped by owner. Pools, curves and locks count as program-controlled, not wallets.",
+      description: "Concentration among the largest token accounts, grouped by owner. Pools, curves and locks count as program-controlled, not wallets. Null when holder data couldn't be fetched or the supply is zero.",
+      required: ["source", "coveredPct", "largestWalletPct", "top10WalletsPct", "programControlledPct", "burnedPct", "top"],
       properties: {
         source: { type: "string" },
         coveredPct: { type: "number" },
@@ -84,8 +123,10 @@ export const REPORT_SCHEMA = {
           type: "array",
           items: {
             type: "object",
+            required: ["owner", "pct", "kind", "label"],
             properties: {
               owner: nullableString,
+              tokenAccount: { type: "string", description: "Set when the owner couldn't be read." },
               pct: { type: "number" },
               kind: { type: "string", enum: ["wallet", "program", "burn", "unknown"] },
               label: nullableString,
@@ -96,10 +137,14 @@ export const REPORT_SCHEMA = {
     },
     launch: {
       type: ["object", "null"],
+      description: "Launchpad stage; null when the token didn't launch on a tracked launchpad.",
+      required: ["platform", "stage"],
       properties: { platform: { type: "string" }, stage: { type: "string", enum: ["bonding-curve", "graduated"] } },
     },
     age: {
       type: ["object", "null"],
+      description: "When exact is true, createdAt and days are set; otherwise atLeastDays and note are. Null when age couldn't be fetched.",
+      required: ["exact"],
       properties: {
         exact: { type: "boolean" },
         createdAt: { type: "string", format: "date-time" },
@@ -113,8 +158,19 @@ export const REPORT_SCHEMA = {
   },
 };
 
+// /v1/sample-report wraps the report with a short note.
+export const SAMPLE_SCHEMA = {
+  type: "object",
+  required: ["note", "report"],
+  properties: {
+    note: { type: "string" },
+    report: REPORT_SCHEMA,
+  },
+};
+
 const errorBody = {
   type: "object",
+  required: ["error", "message"],
   properties: { error: { type: "string" }, message: { type: "string" } },
 };
 
@@ -172,7 +228,10 @@ export function buildOpenApi({ publicUrl, priceUsd, networkId }) {
           summary: "Fetch a sample safety report for the BONK token mint",
           description: "Returns a cached report for BONK so you can preview the output format. No payment needed.",
           responses: {
-            200: { description: "A sample report.", content: { "application/json": { schema: REPORT_SCHEMA } } },
+            200: {
+              description: "A sample report.",
+              content: { "application/json": { schema: SAMPLE_SCHEMA, example: { note: SAMPLE_NOTE, report: EXAMPLE_REPORT } } },
+            },
             503: { description: "Sample temporarily unavailable.", content: { "application/json": { schema: errorBody } } },
           },
         },

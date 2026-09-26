@@ -10,7 +10,7 @@ import { declareDiscoveryExtension, bazaarResourceServerExtension } from "@x402/
 import { isAddress } from "@solana/kit";
 import { makeRpc } from "./rpc.js";
 import { buildReport, ReportError } from "./report.js";
-import { buildOpenApi, EXAMPLE_MINT } from "./openapi.js";
+import { buildOpenApi, EXAMPLE_MINT, SAMPLE_NOTE } from "./openapi.js";
 import { EXAMPLE_REPORT } from "./example.js";
 import { TtlCache, rateLimit } from "./cache.js";
 import { checkPayoutAccount } from "./payout.js";
@@ -99,7 +99,7 @@ export function createApp(config, { rpc = makeRpc(config.rpcUrl), facilitator, s
         sample = await getReport(EXAMPLE_MINT);
         samples.set("sample", sample);
       }
-      res.json({ note: "Free sample. Paid reports work for any token mint.", report: sample });
+      res.json({ note: SAMPLE_NOTE, report: sample });
     } catch (err) {
       console.error("sample failed:", err?.message ?? err);
       res.status(503).json({ error: "sample_unavailable", message: "Sample temporarily unavailable.", exampleShape: EXAMPLE_REPORT });

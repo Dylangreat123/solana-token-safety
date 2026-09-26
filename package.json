@@ -6,7 +6,7 @@
   "main": "src/index.js",
   "scripts": {
     "start": "node src/index.js",
-    "test": "node --test test/unit.test.js test/routes.test.js",
+    "test": "node --test test/unit.test.js test/routes.test.js test/schema.test.js",
     "live-check": "node test/live-check.js",
     "e2e:local": "node test/local-e2e.js"
   },
@@ -24,6 +24,7 @@
   },
   "devDependencies": {
     "@solana-program/system": "^0.10.0",
-    "@x402/fetch": "^2.27.0"
+    "@x402/fetch": "^2.27.0",
+    "ajv": "^8.20.0"
   }
 }
