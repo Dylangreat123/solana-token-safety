@@ -1,0 +1,29 @@
+{
+  "name": "solana-token-safety",
+  "version": "1.0.0",
+  "description": "Pay-per-request Solana token safety reports over x402 (USDC on Solana).",
+  "type": "module",
+  "main": "src/index.js",
+  "scripts": {
+    "start": "node src/index.js",
+    "test": "node --test test/unit.test.js test/routes.test.js",
+    "live-check": "node test/live-check.js",
+    "e2e:local": "node test/local-e2e.js"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@solana/kit": "^5.5.1",
+    "@x402/core": "2.27.0",
+    "@x402/express": "2.27.0",
+    "@x402/extensions": "2.27.0",
+    "@x402/svm": "2.27.0",
+    "express": "^4.22.3"
+  },
+  "devDependencies": {
+    "@solana-program/system": "^0.10.0",
+    "@x402/fetch": "^2.27.0"
+  }
+}
